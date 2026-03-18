@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { connectDB } from './lib/db';
 
 // Configuration
 dotenv.config();
@@ -12,7 +13,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Root Route (সার্ভার চেক করার জন্য)
+// mongodb
+connectDB();
+
+// Root Route
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
