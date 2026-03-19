@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import User from '../models/User';
 
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, phoneNumber } = req.body;
+    const { fullName, email, password, phone } = req.body;
 
     // 1. Validation for essential fields
-    if (!name || !email || !password) {
+    if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Please provide all required fields (name, email, password).',
@@ -30,17 +30,17 @@ export const registerUser = async (req: Request, res: Response) => {
 
     // 4. Create User in Database
     const newUser = await User.create({
-      name,
+      fullName,
       email,
       password: hashedPassword,
-      phoneNumber: phoneNumber || null,
+      phone: phone || null,
       role: 'user',
       isVerified: false,
     });
 
     // 5. Generate JWT Token
     const token = jwt.sign(
-      { id: newUser._id, role: newUser.role, email: newUser.email },
+      { id: newUser._id, role: newUser.role, email: newUser.email, fullName: newUser.fullName },
       process.env.JWT_SECRET || 'vende_bajar_default_secret',
       { expiresIn: '7d' }
     );
@@ -52,7 +52,7 @@ export const registerUser = async (req: Request, res: Response) => {
       token,
       data: {
         id: newUser._id,
-        name: newUser.name,
+        name: newUser.fullName,
         email: newUser.email,
         role: newUser.role,
         accountStatus: newUser.accountStatus,
@@ -77,6 +77,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
+    console.log("hallo")
     const { email, password } = req.body;
 
     // 1. Check if user exists (with password field)
@@ -97,7 +98,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     // 4. Generate Token
     const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
+      { id: user._id, role: user.role, email: user.email, fullName: user.fullName  },
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }
     );
@@ -106,7 +107,7 @@ export const loginUser = async (req: Request, res: Response) => {
       success: true,
       message: 'Login successful! Welcome back.',
       token,
-      data: { id: user._id, name: user.name, email: user.email, role: user.role }
+      data: { id: user._id, name: user.fullName, email: user.email, role: user.role }
     });
 
   } catch (error: any) {
