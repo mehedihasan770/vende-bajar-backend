@@ -69,3 +69,47 @@ export const registerUser = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+
+
+
+
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Check if user exists (with password field)
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    // 2. Check if password matches
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    // 3. Update Last Login Date
+    user.lastLogin = new Date();
+    await user.save();
+
+    // 4. Generate Token
+    const token = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || 'secret',
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful! Welcome back.',
+      token,
+      data: { id: user._id, name: user.name, email: user.email, role: user.role }
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
