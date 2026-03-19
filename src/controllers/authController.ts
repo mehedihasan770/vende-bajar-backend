@@ -5,7 +5,7 @@ import User from '../models/User.js';
 
 export const registerUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, phoneNumber, role } = req.body;
+    const { name, email, password, phoneNumber } = req.body;
 
     // 1. Validation for essential fields
     if (!name || !email || !password) {
@@ -34,7 +34,7 @@ export const registerUser = async (req: Request, res: Response) => {
       email,
       password: hashedPassword,
       phoneNumber: phoneNumber || null,
-      role: role || 'user',
+      role: 'user',
       isVerified: false,
     });
 
