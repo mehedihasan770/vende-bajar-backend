@@ -16,7 +16,7 @@ export interface AuthRequest extends Request {
 export const verifyToken = (req: any, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(" ")[1];
-
+  console.log('token')
   if (!token) {
     return res.status(401).json({
       success: false,
