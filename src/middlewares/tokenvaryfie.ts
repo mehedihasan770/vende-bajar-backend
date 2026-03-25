@@ -1,13 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+export interface AuthUser {
+  id: string;
+  role: string;
+  email: string;
+  iat: number;
+  exp: number;
+}
+
+export interface AuthRequest extends Request {
+  user?: AuthUser;
+}
+
 export const verifyToken = (req: any, res: Response, next: NextFunction) => {
-  const token = req.cookies.vende_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: "Access denied. No token provided." 
+    return res.status(401).json({
+      success: false,
+      message: "Access denied. No token provided."
     });
   }
 
@@ -19,8 +32,8 @@ export const verifyToken = (req: any, res: Response, next: NextFunction) => {
     next();
   } catch (error) {
     return res.status(403).json({ 
-      success: false, 
-      message: "Invalid or expired token." 
+      success: false,
+      message: "Invalid or expired token."
     });
   }
 };

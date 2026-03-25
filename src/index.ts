@@ -2,7 +2,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './lib/db';
-import authRoutes from "../src/routes/authRoutes"
+import authRoutes from "../src/routes/authRoutes";
+import userRouter from '../src/routes/userRoute'
 
 // Configuration
 dotenv.config();
@@ -19,6 +20,7 @@ connectDB();
 
 // auth route
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/user', userRouter);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {

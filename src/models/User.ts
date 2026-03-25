@@ -22,6 +22,7 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
+// user model
 const UserSchema: Schema<IUser> = new Schema(
   {
     fullName: { type: String, required: true, trim: true },
