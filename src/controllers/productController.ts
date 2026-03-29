@@ -4,14 +4,14 @@ import Product from '../models/Product';
 export const createProduct = async (req: Request, res: Response) => {
   try {
     const { 
-      name, 
-      description, 
-      category, 
-      brand, 
-      price, 
-      stock, 
+      name,
+      description,
+      category,
+      brand,
+      price,
+      stock,
       thumbnail,
-      sku 
+      sku
     } = req.body;
 
     if (!name || !description || !category || !brand || !price || !stock || !thumbnail) {
@@ -46,6 +46,35 @@ export const createProduct = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: "Server Error: Could not add product",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+export const getFeaturedProducts = async (req: Request, res: Response) => {
+  try {
+    const products = await Product.find({ 
+      isFeatured: true, 
+      status: 'active' 
+    })
+    .select('name price oldPrice thumbnail rating numReviews category') 
+    .sort({ createdAt: -1 })
+    .limit(8);
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      data: products
+    });
+
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch featured products",
       error: error.message
     });
   }
