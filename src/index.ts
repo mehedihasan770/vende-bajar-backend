@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './lib/db';
 import authRoutes from "../src/routes/authRoutes";
 import userRouter from '../src/routes/userRoute'
+import productRoutes from '../src/routes/productRoutes'
 
 // Configuration
 dotenv.config();
@@ -21,6 +22,7 @@ connectDB();
 // auth route
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/user', userRouter);
+app.use('/api/v1/products', productRoutes);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {

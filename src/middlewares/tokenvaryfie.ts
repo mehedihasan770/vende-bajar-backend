@@ -31,7 +31,7 @@ export const verifyToken = (req: any, res: Response, next: NextFunction) => {
     
     next();
   } catch (error) {
-    return res.status(403).json({ 
+    return res.status(403).json({
       success: false,
       message: "Invalid or expired token."
     });
