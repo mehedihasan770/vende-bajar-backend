@@ -2,9 +2,9 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './lib/db';
-import authRoutes from "../src/routes/authRoutes";
-import userRouter from '../src/routes/userRoute'
-import productRoutes from '../src/routes/productRoutes'
+import authRoutes from "./routes/authRoutes";
+import userRouter from './routes/userRoute';
+import productRoutes from './routes/productRoutes';
 
 // Configuration
 dotenv.config();
