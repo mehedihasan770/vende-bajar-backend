@@ -9,6 +9,7 @@ interface IReview {
 }
 
 export interface IProduct extends Document {
+  vendorEmail: string;
   name: string;
   slug: string;
   description: string;
@@ -45,6 +46,7 @@ export interface IProduct extends Document {
 }
 
 const productSchema: Schema<IProduct> = new Schema({
+  vendorEmail: { type: String, required: true, trim: true },
   name: { type: String, required: true, trim: true },
   slug: { type: String, unique: true, lowercase: true },
   description: { type: String, required: true },

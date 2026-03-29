@@ -3,6 +3,8 @@ import Product from '../models/Product';
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
+    const {email} = (req as any).user;
+    req.body.vendorEmail = email;
     const { 
       name,
       description,
@@ -11,10 +13,11 @@ export const createProduct = async (req: Request, res: Response) => {
       price,
       stock,
       thumbnail,
-      sku
+      sku,
+      vendorEmail
     } = req.body;
 
-    if (!name || !description || !category || !brand || !price || !stock || !thumbnail) {
+    if (!name || !description || !category || !brand || !price || !stock || !thumbnail || !vendorEmail) {
       return res.status(400).json({ 
         success: false, 
         message: "Please provide all required fields (Name, Description, Category, Brand, Price, Stock, Thumbnail)" 
