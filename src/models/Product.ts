@@ -1,13 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-interface IReview {
-  userId: mongoose.Types.ObjectId;
-  userName: string;
-  comment: string;
-  userRating: number;
-  date: Date;
-}
-
 export interface IProduct extends Document {
   vendorEmail: string;
   name: string;
@@ -26,12 +18,7 @@ export interface IProduct extends Document {
   thumbnail: string;
   images: string[];
   videoUrl?: string;
-  specifications: {
-    color?: string[];
-    size?: string[];
-    material?: string;
-    weight?: string;
-  };
+  specifications: Record<string, string>;
   isFeatured: boolean;
   isFlashSale: boolean;
   isNewArrival: boolean;
@@ -39,7 +26,6 @@ export interface IProduct extends Document {
   status: 'active' | 'inactive' | 'draft';
   rating: number;
   numReviews: number;
-  reviews: IReview[];
   metaTitle?: string;
   metaDescription?: string;
   createdAt: Date;
@@ -64,10 +50,9 @@ const productSchema: Schema<IProduct> = new Schema({
   images: [{ type: String }],
   videoUrl: { type: String },
   specifications: {
-    color: [{ type: String }],
-    size: [{ type: String }],
-    material: { type: String },
-    weight: { type: String }
+    type: Map,
+    of: String,
+    default: {}
   },
   isFeatured: { type: Boolean, default: false },
   isFlashSale: { type: Boolean, default: false },
@@ -76,15 +61,6 @@ const productSchema: Schema<IProduct> = new Schema({
   status: { type: String, enum: ['active', 'inactive', 'draft'], default: 'active' },
   rating: { type: Number, default: 0 },
   numReviews: { type: Number, default: 0 },
-  reviews: [
-    {
-      userId: { type: Schema.Types.ObjectId, ref: 'User' },
-      userName: String,
-      comment: String,
-      userRating: Number,
-      date: { type: Date, default: Date.now }
-    }
-  ],
   metaTitle: { type: String },
   metaDescription: { type: String },
   createdAt: { type: Date, default: Date.now }
