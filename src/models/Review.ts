@@ -15,9 +15,9 @@ export interface IReview {
 const ReviewSchema = new Schema<IReview>(
   {
     productId: { 
-      type: Schema.Types.ObjectId, 
-      ref: "Product", 
-      required: true 
+      type: Schema.Types.ObjectId,
+      ref: "Product",
+      required: true
     },
     userId: { 
       type: Schema.Types.ObjectId, 

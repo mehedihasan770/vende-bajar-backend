@@ -5,6 +5,7 @@ import { connectDB } from './lib/db';
 import authRoutes from "./routes/authRoutes";
 import userRouter from './routes/userRoute';
 import productRoutes from './routes/productRoutes';
+import reviewRoute from './routes/reviewRoute';
 
 // Configuration
 dotenv.config();
@@ -19,10 +20,11 @@ app.use(express.json());
 // mongodb
 connectDB();
 
-// auth route
+//route
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/review', reviewRoute);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {
