@@ -13,7 +13,7 @@ export interface AuthRequest extends Request {
   user?: AuthUser;
 }
 
-export const verifyToken = (req: any, res: Response, next: NextFunction) => {
+export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(" ")[1];
   console.log('token')
@@ -25,7 +25,7 @@ export const verifyToken = (req: any, res: Response, next: NextFunction) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as AuthUser;
     
     req.user = decoded;
     

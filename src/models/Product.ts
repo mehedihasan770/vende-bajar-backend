@@ -25,7 +25,6 @@ export interface IProduct extends Document {
   isBestSeller: boolean;
   status: 'active' | 'inactive' | 'draft';
   rating: number;
-  numReviews: number;
   metaTitle?: string;
   metaDescription?: string;
   createdAt: Date;
@@ -60,7 +59,6 @@ const productSchema: Schema<IProduct> = new Schema({
   isBestSeller: { type: Boolean, default: false },
   status: { type: String, enum: ['active', 'inactive', 'draft'], default: 'active' },
   rating: { type: Number, default: 0 },
-  numReviews: { type: Number, default: 0 },
   metaTitle: { type: String },
   metaDescription: { type: String },
   createdAt: { type: Date, default: Date.now }
