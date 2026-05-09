@@ -6,6 +6,7 @@ import authRoutes from "./routes/authRoutes";
 import userRouter from './routes/userRoute';
 import productRoutes from './routes/productRoutes';
 import reviewRoute from './routes/reviewRoute';
+import sliderRoutes from './routes/sliderRoutes';
 
 // Configuration
 dotenv.config();
@@ -25,6 +26,7 @@ app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/review', reviewRoute);
+app.use('/api/v1/sliders', sliderRoutes);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {
