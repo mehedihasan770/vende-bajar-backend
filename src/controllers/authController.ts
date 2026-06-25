@@ -4,6 +4,11 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
 export const registerUser = async (req: Request, res: Response) => {
+  console.log("=========================================");
+  console.log(`🚀 API Called: POST /api/v1/auth/register`);
+  console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
+  console.log("=========================================");
+
   try {
     const { fullName, email, password, phone } = req.body;
 
@@ -76,8 +81,12 @@ export const registerUser = async (req: Request, res: Response) => {
 
 
 export const loginUser = async (req: Request, res: Response) => {
+  console.log("=========================================");
+  console.log(`🚀 API Called: POST /api/v1/auth/login`);
+  console.log(`📦 Request Body:`, { email: req.body.email }); // For security, we don't log passwords
+  console.log("=========================================");
+
   try {
-    console.log("hallo")
     const { email, password } = req.body;
 
     // 1. Check if user exists (with password field)

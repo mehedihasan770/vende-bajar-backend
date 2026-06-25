@@ -2,10 +2,13 @@ import { Request, Response } from 'express';
 import Slider from '../models/Slider';
 
 export const updateSlider = async (req: Request, res: Response) => {
+  console.log("=========================================");
+  console.log(`🚀 API Called: PUT /api/v1/sliders/update/${req.params.slideNumber}`);
+  console.log(`📦 Update Data:`, JSON.stringify(req.body, null, 2));
+  console.log("=========================================");
+
   try {
     const { slideNumber } = req.params;
-    const updateData = req.body;
-    console.log(updateData)
 
     const updatedSlide = await Slider.findOneAndUpdate(
       { slideNumber: Number(slideNumber) },
@@ -30,6 +33,10 @@ export const updateSlider = async (req: Request, res: Response) => {
 
 
 export const getAllSliders = async (req: Request, res: Response) => {
+  console.log("=========================================");
+  console.log(`🚀 API Called: GET /api/v1/sliders/all`);
+  console.log("=========================================");
+
   try {
     const sliders = await Slider.find({ isActive: true }).sort({ slideNumber: 1 });
 

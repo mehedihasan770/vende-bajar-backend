@@ -4,10 +4,14 @@ import { Review } from "../models/Review";
 import Product from "../models/Product";
 
 export const createReview = async (req: AuthRequest, res: Response) => {
+  console.log("=========================================");
+  console.log(`🚀 API Called: POST /api/v1/review/create`);
+  console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
+  console.log(`👤 User Info:`, req.user);
+  console.log("=========================================");
+
   try {
     const { rating, comment, productId } = req.body;
-
-    console.log(rating)
 
     if (!req.user) {
       return res.status(401).json({ success: false, message: "Unauthorized access." });

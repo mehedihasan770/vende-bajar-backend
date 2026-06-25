@@ -3,6 +3,11 @@ import { AuthRequest } from '../middlewares/tokenvaryfie';
 import User from '../models/User';
 
 export const getMe = async (req: AuthRequest, res: Response) => {
+    console.log("=========================================");
+    console.log(`🚀 API Called: GET /api/v1/user/me`);
+    console.log(`👤 User from Token:`, req.user);
+    console.log("=========================================");
+
     try {
         // ১. টোকেন থেকে পাওয়া আইডি দিয়ে ডাটাবেসে খোঁজা
         const user = await User.findById(req.user?.id).select('-password -__v');
