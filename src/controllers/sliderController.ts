@@ -12,7 +12,7 @@ export const updateSlider = async (req: Request, res: Response) => {
 
     const updatedSlide = await Slider.findOneAndUpdate(
       { slideNumber: Number(slideNumber) },
-      updateData,
+      req.body,
       { returnDocument: 'after', runValidators: true, upsert: true }
     );
 
