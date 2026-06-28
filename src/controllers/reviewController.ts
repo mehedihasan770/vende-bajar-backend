@@ -1,147 +1,194 @@
+import mongoose from "mongoose";
 import { Response } from "express";
-import { AuthRequest, AuthUser } from "../middlewares/tokenvaryfie";
+import { AuthRequest } from "../middlewares/verifyToken";
 import { Review } from "../models/Review";
 import Product from "../models/Product";
+import User from "../models/User";
 
+/**
+ * @desc    Get all reviews for a specific product
+ * @route   GET /api/v1/reviews/product/:productId
+ */
 export const getProductReviews = async (req: AuthRequest, res: Response) => {
   try {
     const { productId } = req.params;
 
-    if (!productId) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID is required.",
-      });
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "Valid Product ID is required." });
     }
 
-    const reviews = await Review.find({ productId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
 
+    const [total, reviews] = await Promise.all([
+      Review.countDocuments({ productId }),
+      Review.find({ productId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    // Format data for frontend
     const formattedReviews = reviews.map((review) => ({
       id: review._id?.toString(),
       user: review.userName || "Anonymous",
+      userImage: review.userProfileImage,
       rating: review.rating,
-      date: review.createdAt
-        ? new Date(review.createdAt).toLocaleDateString("bn-BD", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-        : "",
+      date: review.createdAt,
       comment: review.comment,
-      helpful: 0,
     }));
 
     return res.status(200).json({
       success: true,
-      count: formattedReviews.length,
+      pagination: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      },
       data: formattedReviews,
     });
   } catch (error: any) {
-    console.error("Get Product Reviews Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error: Could not fetch reviews",
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
 
+/**
+ * @desc    Create a new review (Secure & Production Ready)
+ * @route   POST /api/v1/reviews/add
+ */
 export const createReview = async (req: AuthRequest, res: Response) => {
-  console.log("=========================================");
-  console.log(`🚀 API Called: POST /api/v1/review/create`);
-  console.log(`📦 Request Body:`, JSON.stringify(req.body, null, 2));
-  console.log(`👤 User Info:`, req.user);
-  console.log("=========================================");
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const { rating, comment, productId } = req.body;
+    const userId = req.user?.id;
 
-    if (!req.user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access." });
+    // 1. Basic Validation
+    if (!productId || !rating || !comment) {
+      return res.status(400).json({ success: false, message: "Please provide product ID, rating, and comment." });
     }
 
-    const { role, id } = req.user as AuthUser;
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "Invalid product ID." });
+    }
 
-    if (role !== "user") {
+    // 2. Fetch User Data from DB (Prevent Data Spoofing)
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+
+    // 3. Rating & Comment Validation
+    const normalizedRating = Number(rating);
+    if (normalizedRating < 1 || normalizedRating > 5) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: "Rating must be between 1 and 5." });
+    }
+
+    if (comment.trim().length < 10) {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: "Comment must be at least 10 characters." });
+    }
+
+    // 4. Check if Product Exists
+    const product = await Product.findById(productId).session(session);
+    if (!product) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Product not found." });
+    }
+
+    /*
+    // ========================================================================
+    // 4.5. Verified Purchase Check (Uncomment this after implementing Order module)
+    // ========================================================================
+    // import Order from "../models/Order"; // Need to import this at the top
+
+    const hasOrdered = await Order.findOne({
+      userId,
+      "items.productId": productId,
+      status: 'delivered'
+    }).session(session);
+
+    if (!hasOrdered) {
+      await session.abortTransaction();
       return res.status(403).json({
         success: false,
-        message: `An ${role} is not allowed to add a review.`,
+        message: "You can only review products you have purchased and received."
       });
     }
+    // ========================================================================
+    */
 
-    if (!productId || !comment) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required." });
-    }
-
-    const normalizedRating = Number(rating);
-    if (
-      !Number.isFinite(normalizedRating) ||
-      normalizedRating < 1 ||
-      normalizedRating > 5
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Rating must be between 1 and 5." });
-    }
-
-    const trimmedComment = comment.trim();
-    if (trimmedComment.length < 10) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment must be at least 10 characters long.",
-      });
-    }
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found." });
-    }
-
-    const existingReview = await Review.findOne({ userId: id, productId });
+    // 5. Prevent Multiple Reviews from Same User on Same Product
+    const existingReview = await Review.findOne({ userId, productId }).session(session);
     if (existingReview) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already reviewed this product.",
-      });
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: "You have already reviewed this product." });
     }
 
-    const newReview = await Review.create({
-      ...req.body,
+    // 6. Create Review with Secure Data
+    const newReview = new Review({
+      productId,
+      userId,
+      userName: user.fullName,
+      userEmail: user.email,
+      userProfileImage: user.profileImage,
       rating: normalizedRating,
-      comment: trimmedComment,
+      comment: comment.trim(),
     });
 
-    const currentReviewCount = product.numReviews || 0;
-    const currentAverageRating = product.rating || 0;
-    const updatedAverageRating =
-      currentReviewCount === 0
-        ? normalizedRating
-        : (currentAverageRating * currentReviewCount + normalizedRating) /
-          (currentReviewCount + 1);
+    await newReview.save({ session });
 
-    product.rating = Number(updatedAverageRating.toFixed(1));
-    product.numReviews = currentReviewCount + 1;
-    await product.save();
+    // 7. Update Product Rating & numReviews Atomically
+    await Product.findByIdAndUpdate(
+      productId,
+      [
+        {
+          $set: {
+            numReviews: { $add: ["$numReviews", 1] },
+            rating: {
+              $round: [
+                {
+                  $divide: [
+                    { $add: [{ $multiply: ["$rating", "$numReviews"] }, normalizedRating] },
+                    { $add: ["$numReviews", 1] },
+                  ],
+                },
+                1,
+              ],
+            },
+          },
+        },
+      ],
+      { session }
+    );
 
-    return res.status(201).json({
-      success: true,
-      message: "Review added successfully! ✅",
-      data: newReview,
-    });
+    await session.commitTransaction();
+    res.status(201).json({ success: true, message: "Review added successfully! ✅", data: newReview });
+
   } catch (error: any) {
+    await session.abortTransaction();
     console.error("Create Review Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server Error: Could not add Review",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  } finally {
+    session.endSession();
   }
 };
+
+/**
+ * ============================================================================
+ * TODO: FUTURE APIS TO BE IMPLEMENTED FOR REVIEWS
+ * ============================================================================
+ *
+ * 1. updateReview (PATCH) - Allow user to edit their rating/comment.
+ * 2. deleteReview (DELETE) - Allow user or Admin to remove a review.
+ * 3. getMyReviews (GET) - Fetch all reviews given by the logged-in user.
+ * 4. toggleHelpful (PATCH) - Allow other users to mark a review as helpful.
+ * 5. replyToReview (POST) - Allow Vendors/Admins to reply to a review.
+ *
+ * ============================================================================
+ */
