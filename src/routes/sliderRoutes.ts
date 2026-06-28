@@ -1,6 +1,6 @@
 import express from 'express';
 import { updateSlider, getAllSliders } from '../controllers/sliderController';
-import { verifyToken } from '../middlewares/tokenvaryfie';
+import { verifyToken } from '../middlewares/verifyToken';
 import { verifyAdmin } from '../middlewares/verifyAdmin'
 
 const router = express.Router();

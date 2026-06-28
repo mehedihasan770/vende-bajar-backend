@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthRequest } from '../middlewares/tokenvaryfie';
+import { AuthRequest } from '../middlewares/verifyToken';
 import User from '../models/User';
 
 export const getMe = async (req: AuthRequest, res: Response) => {
