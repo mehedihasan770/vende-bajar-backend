@@ -1,24 +1,21 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-// ভ্যারিয়েন্ট ইন্টারফেস (কালার, সাইজ বা অন্য অপশনের জন্য)
+// ভ্যারিয়েন্ট ইন্টারফেস
 interface IVariant {
   sku: string;
   price: number;
   salePrice?: number;
   stock: number;
-  attributes: Map<string, string>; // e.g., { "color": "Red", "size": "XL" }
+  attributes: Map<string, string>;
   images: string[];
   isDefault: boolean;
 }
 
 export interface IProduct extends Document {
-  // Identity & Ownership
   vendor: mongoose.Types.ObjectId;
   vendorEmail: string;
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
-
-  // Basic Info
   name: string;
   slug: string;
   description: string;
@@ -28,80 +25,57 @@ export interface IProduct extends Document {
   brand: string;
   tags: string[];
   keywords?: string;
-
-  // Pricing & Stock (Main/Default)
   basePrice: number;
   salePrice?: number;
+  saleType?: "flash" | "regular" | "seasonal" | null;
+  regularPrice?: number;
   saleStartDate?: Date;
   saleEndDate?: Date;
   costPrice?: number;
-  stock: number;
   sku: string;
-
-  // Variants
   hasVariants: boolean;
   variants: IVariant[];
-
-  // Media
   thumbnail: string;
   images: string[];
   videoUrl?: string;
   specifications: Map<string, string>;
-
-  // Marketing & Flags
   isFeatured: boolean;
   isFlashSale: boolean;
-  discountPercentage: number;
-
-  // Status & Management
-  status:
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "active"
-    | "inactive"
-    | "draft"
-    | "archived";
+  status: "pending" | "approved" | "rejected" | "active" | "inactive" | "draft" | "archived";
   isDeleted: boolean;
   deletedAt?: Date;
-
-  // Metrics & Analytics
   rating: number;
   numReviews: number;
   totalSales: number;
   viewCount: number;
-
-  // Inventory & Shipping
   inventory: {
+    stock: number;
     lowStockThreshold: number;
     isOutOfStock: boolean;
     allowBackorder: boolean;
   };
   shipping: {
-    weight?: number; // In KG or Gram
-    dimensions?: {
-      length: number;
-      width: number;
-      height: number;
-    };
-    shippingClass?: string; // e.g., "Heavy Load", "Fragile"
+    weight?: number;
+    dimensions?: { length: number; width: number; height: number; };
+    shippingClass?: string;
   };
-
-  // SEO
   metaTitle?: string;
   metaDescription?: string;
-
-  // Linked Products (Cross-sell/Up-sell)
   relatedProducts: mongoose.Types.ObjectId[];
   upsellProducts: mongoose.Types.ObjectId[];
-
   createdAt: Date;
   updatedAt: Date;
+  // Virtuals
+  finalPrice: number;
+  isSaleActive: boolean;
+  isFlashSaleActive: boolean;
+  discountPercentage: number;
+  stock: number;
 }
 
 const variantSchema = new Schema({
   sku: { type: String, required: true, unique: true, sparse: true },
-  price: { type: Number, required: true, min: 0 },
+  price: { type: Number, required: true, min: 0.01 },
   salePrice: { type: Number, min: 0 },
   stock: { type: Number, default: 0, min: 0 },
   attributes: { type: Map, of: String },
@@ -111,138 +85,138 @@ const variantSchema = new Schema({
 
 const productSchema: Schema<IProduct> = new Schema(
   {
-    // Vendor/auth itself sets these values during creation
-    vendor: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    }, // input from logged-in vendor auth
-    vendorEmail: { type: String, required: true, trim: true }, // input from auth/session
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, // system: created by current user
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" }, // system: updated on edit
-
-    // Product identity fields from vendor form
-    name: { type: String, required: true, trim: true, index: "text" }, // required input
-    slug: { type: String, unique: true, lowercase: true, index: true }, // system-generated from name
-    description: { type: String, required: true }, // required input
-    shortDescription: { type: String }, // optional input
-    category: {
-      type: String,
-      required: true,
-      index: true,
-    }, // required input
-    subCategory: { type: String }, // optional input
-    brand: { type: String, required: true, index: true }, // required input
-    tags: [{ type: String, index: true }], // optional input list
-    keywords: { type: String }, // optional input
-
-    // Pricing and stock inputs
-    basePrice: { type: Number, required: true, min: 0 }, // required input
-    salePrice: { type: Number, min: 0 }, // optional input
-    saleStartDate: { type: Date }, // optional input
-    saleEndDate: { type: Date }, // optional input
-    costPrice: { type: Number, min: 0 }, // optional input
-    stock: { type: Number, required: true, default: 0, min: 0 }, // required input
-    sku: { type: String, unique: true, sparse: true, index: true }, // optional input
-
-    // Variant support
-    hasVariants: { type: Boolean, default: false }, // optional flag from vendor
-    variants: [variantSchema], // optional array of variant objects
-
-    // Media and specification inputs
-    thumbnail: { type: String, required: true }, // required input URL
-    images: [{ type: String }], // optional gallery URLs input
-    videoUrl: { type: String }, // optional input URL
-    specifications: { type: Map, of: String, default: {} }, // optional key/value inputs
-
-    // Marketing/flag inputs
-    isFeatured: { type: Boolean, default: false }, // optional input
-    isFlashSale: { type: Boolean, default: false }, // optional input
-    discountPercentage: { type: Number, default: 0, min: 0, max: 100 }, // system-calculated
-
-    // System status fields
+    vendor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    vendorEmail: { type: String, required: true, trim: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    name: { type: String, required: true, trim: true, index: "text" },
+    slug: { type: String, unique: true, lowercase: true, index: true },
+    description: { type: String, required: true },
+    shortDescription: { type: String },
+    category: { type: String, required: true, index: true },
+    subCategory: { type: String },
+    brand: { type: String, required: true, index: true },
+    tags: [{ type: String, index: true }],
+    keywords: { type: String },
+    basePrice: { type: Number, required: true, min: 0.01 },
+    salePrice: { type: Number, min: 0 },
+    saleType: { type: String, enum: ["flash", "regular", "seasonal"], index: true },
+    regularPrice: { type: Number, min: 0 },
+    saleStartDate: { type: Date },
+    saleEndDate: { type: Date },
+    costPrice: { type: Number, min: 0 },
+    sku: { type: String, unique: true, sparse: true, index: true },
+    hasVariants: { type: Boolean, default: false },
+    variants: [variantSchema],
+    thumbnail: { type: String, required: true },
+    images: [{ type: String }],
+    videoUrl: { type: String },
+    specifications: { type: Map, of: String, default: {} },
+    isFeatured: { type: Boolean, default: false },
+    isFlashSale: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: [
-        "pending",
-        "approved",
-        "rejected",
-        "active",
-        "inactive",
-        "draft",
-        "archived",
-      ],
+      enum: ["pending", "approved", "rejected", "active", "inactive", "draft", "archived"],
       default: "pending",
       index: true,
-    }, // system-managed status
-    isDeleted: { type: Boolean, default: false, index: true }, // system-managed soft delete
-    deletedAt: { type: Date }, // system-managed timestamp
-
-    // System metrics fields
-    rating: { type: Number, default: 0, min: 0, max: 5 }, // system-updated rating
-    numReviews: { type: Number, default: 0 }, // system-tracked
-    totalSales: { type: Number, default: 0 }, // system-tracked
-    viewCount: { type: Number, default: 0 }, // system-tracked
-
-    // Inventory configuration
+    },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date },
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    numReviews: { type: Number, default: 0 },
+    totalSales: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
     inventory: {
-      lowStockThreshold: { type: Number, default: 5 }, // optional input
-      isOutOfStock: { type: Boolean, default: false }, // system-updated based on stock
-      allowBackorder: { type: Boolean, default: false }, // optional input
+      stock: { type: Number, required: true, default: 0, min: 0 },
+      lowStockThreshold: { type: Number, default: 10 },
+      isOutOfStock: { type: Boolean, default: false },
+      allowBackorder: { type: Boolean, default: false },
     },
     shipping: {
-      weight: { type: Number, default: 0 }, // optional input
+      weight: { type: Number, default: 0 },
       dimensions: {
-        length: { type: Number, default: 0 }, // optional input
-        width: { type: Number, default: 0 }, // optional input
-        height: { type: Number, default: 0 }, // optional input
+        length: { type: Number, default: 0 },
+        width: { type: Number, default: 0 },
+        height: { type: Number, default: 0 },
       },
-      shippingClass: { type: String }, // optional input
+      shippingClass: { type: String },
     },
-
-    // SEO fields from vendor
-    metaTitle: { type: String }, // optional input
-    metaDescription: { type: String }, // optional input
-
-    // Optional product relations
-    relatedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }], // optional input references
-    upsellProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }], // optional input references
+    metaTitle: { type: String },
+    metaDescription: { type: String },
+    relatedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+    upsellProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
   },
   {
     timestamps: true,
-  },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-// Indexes for performance
+// Indexes
 productSchema.index({ name: "text", description: "text", tags: "text" });
 
-// Middleware: Slug generation and Stock Management
-productSchema.pre<IProduct>("save", async function () {
+// Middleware
+productSchema.pre<IProduct>("save", function (next) {
   if (this.isModified("name")) {
-    this.slug = this.name
-      .split(" ")
-      .join("-")
-      .toLowerCase()
-      .replace(/[^\w-]+/g, "");
+    this.slug = this.name.split(" ").join("-").toLowerCase().replace(/[^\w-]+/g, "");
   }
 
-  // Stock status logic
-  if (this.stock <= 0) {
-    this.inventory.isOutOfStock = true;
-  } else {
-    this.inventory.isOutOfStock = false;
-  }
+  // Auto-set isOutOfStock based on inventory stock
+  this.inventory.isOutOfStock = this.inventory.stock <= 0;
 
-  // Discount calculation
-  if (this.basePrice > 0 && this.salePrice) {
-    this.discountPercentage = Math.round(
-      ((this.basePrice - this.salePrice) / this.basePrice) * 100,
-    );
+  next();
+});
+
+// Virtual for legacy/convenience stock access
+productSchema.virtual("stock").get(function(this: IProduct) {
+  return this.inventory?.stock;
+}).set(function(this: IProduct, value: number) {
+  if (this.inventory) {
+    this.inventory.stock = value;
   }
 });
 
-const Product: Model<IProduct> =
-  mongoose.models.Product || mongoose.model<IProduct>("Product", productSchema);
+// Helper for sales logic
+const getActiveSaleInfo = (p: IProduct) => {
+  const now = new Date();
+  const isFlash = (p.saleType === "flash" || (p.saleType == null && p.isFlashSale)) &&
+                  p.salePrice != null && p.saleStartDate && p.saleEndDate &&
+                  p.saleStartDate <= now && p.saleEndDate >= now;
+
+  const isSeasonal = p.saleType === "seasonal" && p.salePrice != null &&
+                     p.saleStartDate && p.saleEndDate &&
+                     p.saleStartDate <= now && p.saleEndDate >= now;
+
+  const isRegular = p.saleType === "regular" && p.regularPrice != null && p.regularPrice < p.basePrice;
+
+  return { isFlash, isSeasonal, isRegular };
+};
+
+productSchema.virtual("isFlashSaleActive").get(function (this: IProduct) {
+  return getActiveSaleInfo(this).isFlash;
+});
+
+productSchema.virtual("isSaleActive").get(function (this: IProduct) {
+  const { isFlash, isSeasonal, isRegular } = getActiveSaleInfo(this);
+  return isFlash || isSeasonal || isRegular;
+});
+
+productSchema.virtual("finalPrice").get(function (this: IProduct) {
+  const { isFlash, isSeasonal, isRegular } = getActiveSaleInfo(this);
+  if (isFlash || isSeasonal) return this.salePrice;
+  if (isRegular) return this.regularPrice;
+  return this.basePrice;
+});
+
+productSchema.virtual("discountPercentage").get(function (this: IProduct) {
+  const finalPrice = this.finalPrice;
+  if (finalPrice < this.basePrice) {
+    return Math.round(((this.basePrice - finalPrice) / this.basePrice) * 100);
+  }
+  return 0;
+});
+
+const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>("Product", productSchema);
 
 export default Product;
