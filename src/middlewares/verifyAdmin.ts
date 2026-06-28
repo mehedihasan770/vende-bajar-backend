@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from './verifyToken';
 
-export const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
-  const user = (req as any).user;
+export const verifyAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const user = req.user;
 
   if (user && user.role === 'admin') {
     next();

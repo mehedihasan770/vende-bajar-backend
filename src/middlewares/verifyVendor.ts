@@ -1,14 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from './verifyToken';
 
-export const verifyVendor = (req: Request, res: Response, next: NextFunction) => {
-  const user = (req as any).user;
+export const verifyVendor = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const user = req.user;
 
-  if (user && user.role === 'vendor') {
+  // Allowing both 'vendor' and 'admin' because admin usually has all access
+  if (user && (user.role === 'vendor' || user.role === 'admin')) {
     next();
   } else {
     return res.status(403).json({ 
       success: false, 
-      message: "Access Denied! Only vendors can add products."
+      message: "Access Denied! Only vendors or admins can perform this action."
     });
   }
 };
