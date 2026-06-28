@@ -1,13 +1,25 @@
-import express from 'express';
-import { verifyToken } from '../middlewares/tokenvaryfie';
-import { verifyVendor } from '../middlewares/verifyVendor';
-import { createProduct, getFeaturedProducts, getProductById } from '../controllers/productController';
+import express from "express";
+import { verifyToken } from "../middlewares/verifyToken";
+import { verifyVendor } from "../middlewares/verifyVendor";
+import {
+  createProduct,
+  getAllProducts,
+  getFeaturedProducts,
+  getFlashSaleProducts,
+  getProductById,
+  getProductBySlug,
+} from "../controllers/productController";
 
 const router = express.Router();
 
-// product Route
-router.post('/add', verifyToken, verifyVendor, createProduct);
-router.get('/featured', getFeaturedProducts);
-router.get('/:id', getProductById);
+// Public Routes
+router.get("/", getAllProducts); // Get all products with filters, search, pagination
+router.get("/featured", getFeaturedProducts);
+router.get("/flash-sale", getFlashSaleProducts);
+router.get("/s/:slug", getProductBySlug); // SEO Friendly route
+router.get("/:id", getProductById); // Get by ID
+
+// Protected Routes (Vendor/Admin Only)
+router.post("/add", verifyToken, verifyVendor, createProduct);
 
 export default router;
