@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Product from "../models/Product";
+import mongoose from "mongoose";
 
 /**
  * @desc    Create a new product
@@ -33,22 +34,24 @@ export const createProduct = async (req: Request, res: Response) => {
         });
       }
       const discount = ((basePrice - salePrice) / basePrice) * 100;
-      if (discount > 35) {
+      if (discount < 15 || discount > 75) {
         return res.status(400).json({
           success: false,
-          message: "Flash sale discount cannot exceed 35%.",
+          message: "Flash sale discount must be between 15% and 75%.",
         });
       }
     }
 
-    // 3. Prepare Data
+    // 3. Prepare Data (Clean up empty strings for Dates)
     const productData = {
       vendor: id,
       vendorEmail: email,
       createdBy: id,
       name, description, shortDescription, category, subCategory,
       brand, basePrice, salePrice, saleType, regularPrice,
-      saleStartDate, saleEndDate, costPrice, sku, hasVariants,
+      saleStartDate: saleStartDate === "" ? undefined : saleStartDate,
+      saleEndDate: saleEndDate === "" ? undefined : saleEndDate,
+      costPrice, sku, hasVariants,
       variants, thumbnail, images, videoUrl, specifications,
       isFeatured, isFlashSale,
       inventory: {
@@ -57,7 +60,7 @@ export const createProduct = async (req: Request, res: Response) => {
         allowBackorder: Boolean(inventory?.allowBackorder),
       },
       shipping, metaTitle, metaDescription,
-      status: "pending" // Admin approval needed
+      status: "pending"
     };
 
     const product = new Product(productData);
@@ -69,9 +72,28 @@ export const createProduct = async (req: Request, res: Response) => {
       data: savedProduct,
     });
   } catch (error: any) {
+    console.error("❌ CREATE PRODUCT ERROR:", error); // এই লাইনটি তোমাকে টার্মিনালে এরর দেখাবে
+
+    // Handle Mongoose Validation Errors
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((val: any) => val.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation Error: " + messages.join(", "),
+      });
+    }
+
+    // Handle Duplicate Key Error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate SKU or Slug detected. Please use a unique value.",
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: error.code === 11000 ? "Duplicate SKU or Slug" : "Server Error",
+      message: "Internal Server Error",
       error: error.message,
     });
   }
@@ -210,20 +232,20 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 
 /**
- * ============================================================================
- * TODO: FUTURE APIS TO BE IMPLEMENTED FOR A PROFESSIONAL E-COMMERCE SYSTEM
- * ============================================================================
- *
- * 1.  updateProduct (PATCH) - Modify price, stock, or details by Vendor/Admin.
- * 2.  deleteProduct (DELETE) - Soft delete product (set isDeleted: true).
- * 3.  getProductBySlug (GET) - Fetch product by URL-friendly slug for SEO.
- * 4.  getRelatedProducts (GET) - Fetch products in the same category/brand.
- * 5.  updateProductStatus (PATCH/ADMIN) - Admin approves or rejects products.
- * 6.  getVendorProducts (GET) - List all products belonging to the logged-in vendor.
- * 7.  bulkUpdateProducts (PATCH) - Update multiple products at once (e.g., price change).
- * 8.  toggleFeaturedStatus (PATCH) - Quickly make a product featured or not.
- * 9.  getInventoryStats (GET) - Summary of low stock and out of stock products.
- * 10. addReview/getReviews (Handled in Review Controller, but linked to Product).
- *
- * ============================================================================
+ * @desc    Get Single Product by Slug
+ * @route   GET /api/v1/products/s/:slug
  */
+export const getProductBySlug = async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const product = await Product.findOne({ slug, isDeleted: false }).populate("vendor", "fullName profileImage email");
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found!" });
+    }
+
+    res.status(200).json({ success: true, data: product });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: "Error fetching product by slug", error: error.message });
+  }
+};

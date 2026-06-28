@@ -27,7 +27,7 @@ export interface IProduct extends Document {
   keywords?: string;
   basePrice: number;
   salePrice?: number;
-  saleType?: "flash" | "regular" | "seasonal" | null;
+  saleType?: "flash" | "regular" | null;
   regularPrice?: number;
   saleStartDate?: Date;
   saleEndDate?: Date;
@@ -100,7 +100,7 @@ const productSchema: Schema<IProduct> = new Schema(
     keywords: { type: String },
     basePrice: { type: Number, required: true, min: 0.01 },
     salePrice: { type: Number, min: 0 },
-    saleType: { type: String, enum: ["flash", "regular", "seasonal"], index: true },
+    saleType: { type: String, enum: ["flash", "regular"], index: true },
     regularPrice: { type: Number, min: 0 },
     saleStartDate: { type: Date },
     saleEndDate: { type: Date },
@@ -157,15 +157,15 @@ const productSchema: Schema<IProduct> = new Schema(
 productSchema.index({ name: "text", description: "text", tags: "text" });
 
 // Middleware
-productSchema.pre<IProduct>("save", function (next) {
+productSchema.pre<IProduct>("save", function () {
   if (this.isModified("name")) {
     this.slug = this.name.split(" ").join("-").toLowerCase().replace(/[^\w-]+/g, "");
   }
 
   // Auto-set isOutOfStock based on inventory stock
-  this.inventory.isOutOfStock = this.inventory.stock <= 0;
-
-  next();
+  if (this.inventory) {
+    this.inventory.isOutOfStock = this.inventory.stock <= 0;
+  }
 });
 
 // Virtual for legacy/convenience stock access
@@ -180,32 +180,37 @@ productSchema.virtual("stock").get(function(this: IProduct) {
 // Helper for sales logic
 const getActiveSaleInfo = (p: IProduct) => {
   const now = new Date();
-  const isFlash = (p.saleType === "flash" || (p.saleType == null && p.isFlashSale)) &&
+
+  // Flash Sale is active only during dates
+  const isFlashActive = (p.saleType === "flash" || (p.saleType == null && p.isFlashSale)) &&
                   p.salePrice != null && p.saleStartDate && p.saleEndDate &&
                   p.saleStartDate <= now && p.saleEndDate >= now;
 
-  const isSeasonal = p.saleType === "seasonal" && p.salePrice != null &&
-                     p.saleStartDate && p.saleEndDate &&
-                     p.saleStartDate <= now && p.saleEndDate >= now;
+  // Regular Sale is active if flash is not active and regularPrice exists
+  const isRegularActive = p.regularPrice != null && p.regularPrice < p.basePrice;
 
-  const isRegular = p.saleType === "regular" && p.regularPrice != null && p.regularPrice < p.basePrice;
-
-  return { isFlash, isSeasonal, isRegular };
+  return { isFlashActive, isRegularActive };
 };
 
 productSchema.virtual("isFlashSaleActive").get(function (this: IProduct) {
-  return getActiveSaleInfo(this).isFlash;
+  return getActiveSaleInfo(this).isFlashActive;
 });
 
 productSchema.virtual("isSaleActive").get(function (this: IProduct) {
-  const { isFlash, isSeasonal, isRegular } = getActiveSaleInfo(this);
-  return isFlash || isSeasonal || isRegular;
+  const { isFlashActive, isRegularActive } = getActiveSaleInfo(this);
+  return isFlashActive || isRegularActive;
 });
 
 productSchema.virtual("finalPrice").get(function (this: IProduct) {
-  const { isFlash, isSeasonal, isRegular } = getActiveSaleInfo(this);
-  if (isFlash || isSeasonal) return this.salePrice;
-  if (isRegular) return this.regularPrice;
+  const { isFlashActive, isRegularActive } = getActiveSaleInfo(this);
+
+  // Priority 1: Active Flash Sale
+  if (isFlashActive) return this.salePrice;
+
+  // Priority 2: Regular Sale (if flash expired or not present)
+  if (isRegularActive) return this.regularPrice;
+
+  // Default: Base Price
   return this.basePrice;
 });
 
