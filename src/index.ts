@@ -10,6 +10,7 @@ import userRouter from './routes/userRoute';
 import productRoutes from './routes/productRoutes';
 import reviewRoute from './routes/reviewRoute';
 import sliderRoutes from './routes/sliderRoutes';
+import categoryRoutes from './routes/categoryRoutes';
 
 // Configuration
 dotenv.config();
@@ -30,6 +31,7 @@ app.use('/api/v1/user', userRouter);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/review', reviewRoute);
 app.use('/api/v1/sliders', sliderRoutes);
+app.use('/api/v1/categories', categoryRoutes);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {
@@ -39,6 +41,10 @@ app.get('/', (req: Request, res: Response) => {
     status: 'Ready for Development'
   });
 });
+
+// Global Error Handler
+import { errorHandler } from './middlewares/errorMiddleware';
+app.use(errorHandler);
 
 // Server Listen
 app.listen(PORT, () => {

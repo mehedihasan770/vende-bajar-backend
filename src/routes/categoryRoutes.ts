@@ -5,10 +5,13 @@ import { verifyAdmin } from "../middlewares/verifyAdmin";
 
 const router = express.Router();
 
-// Admin can add category
-router.post("/add-category", verifyToken, verifyAdmin, addCategory);
+/**
+ * @description Category Routes
+ * POST: /api/v1/categories/add-category (Admin Only)
+ * GET:  /api/v1/categories/get-categories (Public)
+ */
 
-// Anyone can get categories for dropdown
+router.post("/add-category", verifyToken, verifyAdmin, addCategory);
 router.get("/get-categories", getAllCategories);
 
 export default router;

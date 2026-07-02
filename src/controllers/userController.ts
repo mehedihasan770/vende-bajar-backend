@@ -1,37 +1,17 @@
-import { Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/verifyToken';
 import User from '../models/User';
+import { AppError, catchAsync } from '../middlewares/errorMiddleware';
 
-export const getMe = async (req: AuthRequest, res: Response) => {
-    console.log("=========================================");
-    console.log(`🚀 API Called: GET /api/v1/user/me`);
-    console.log(`👤 User from Token:`, req.user);
-    console.log("=========================================");
+export const getMe = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const user = await User.findById(req.user?.id).select('-password -__v');
 
-    try {
-        // ১. টোকেন থেকে পাওয়া আইডি দিয়ে ডাটাবেসে খোঁজা
-        const user = await User.findById(req.user?.id).select('-password -__v');
-
-        // ২. ইউজার না পাওয়া গেলে এরর মেসেজ
-        if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "User not found" 
-            });
-        }
-
-        // ৩. সফল হলে ইউজার ডাটা পাঠানো
-        return res.status(200).json({
-            success: true,
-            user: user
-        });
-
-    } catch (error: any) {
-        // ৪. সার্ভার বা ডাটাবেস এরর হলে
-        return res.status(500).json({ 
-            success: false, 
-            message: "Internal Server Error",
-            error: error.message 
-        });
+    if (!user) {
+        return next(new AppError("User not found", 404));
     }
-};
+
+    return res.status(200).json({
+        success: true,
+        user: user
+    });
+});

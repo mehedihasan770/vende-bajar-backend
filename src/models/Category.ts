@@ -22,11 +22,10 @@ const categorySchema: Schema<ICategory> = new Schema(
 );
 
 // Slug auto-generation middleware
-categorySchema.pre<ICategory>("save", function (next) {
+categorySchema.pre<ICategory>("save", async function () {
   if (this.isModified("name")) {
     this.slug = this.name.split(" ").join("-").toLowerCase().replace(/[^\w-]+/g, "");
   }
-  next();
 });
 
 const Category: Model<ICategory> = mongoose.models.Category || mongoose.model<ICategory>("Category", categorySchema);

@@ -1,55 +1,29 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import Slider from '../models/Slider';
+import { AppError, catchAsync } from '../middlewares/errorMiddleware';
 
-export const updateSlider = async (req: Request, res: Response) => {
-  console.log("=========================================");
-  console.log(`🚀 API Called: PUT /api/v1/sliders/update/${req.params.slideNumber}`);
-  console.log(`📦 Update Data:`, JSON.stringify(req.body, null, 2));
-  console.log("=========================================");
+export const updateSlider = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+  const { slideNumber } = req.params;
 
-  try {
-    const { slideNumber } = req.params;
+  const updatedSlide = await Slider.findOneAndUpdate(
+    { slideNumber: Number(slideNumber) },
+    req.body,
+    { returnDocument: 'after', runValidators: true, upsert: true }
+  );
 
-    const updatedSlide = await Slider.findOneAndUpdate(
-      { slideNumber: Number(slideNumber) },
-      req.body,
-      { returnDocument: 'after', runValidators: true, upsert: true }
-    );
+  res.status(200).json({
+    success: true,
+    message: `Slide ${slideNumber} updated successfully!`,
+    data: updatedSlide
+  });
+});
 
-    res.status(200).json({
-      success: true,
-      message: `Slide ${slideNumber} updated successfully!`,
-      data: updatedSlide
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update slide",
-      error: error.message
-    });
-  }
-};
+export const getAllSliders = catchAsync(async (req: Request, res: Response) => {
+  const sliders = await Slider.find({ isActive: true }).sort({ slideNumber: 1 });
 
-
-
-export const getAllSliders = async (req: Request, res: Response) => {
-  console.log("=========================================");
-  console.log(`🚀 API Called: GET /api/v1/sliders/all`);
-  console.log("=========================================");
-
-  try {
-    const sliders = await Slider.find({ isActive: true }).sort({ slideNumber: 1 });
-
-    res.status(200).json({
-      success: true,
-      count: sliders.length,
-      data: sliders,
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      message: "Server Error: Unable to fetch slider data",
-      error: error.message,
-    });
-  }
-};
+  res.status(200).json({
+    success: true,
+    count: sliders.length,
+    data: sliders,
+  });
+});
