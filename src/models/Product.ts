@@ -1,137 +1,147 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-// ভ্যারিয়েন্ট ইন্টারফেস
+// =============================================================
+// ✅ INTERFACES
+// =============================================================
+
 interface IVariant {
-  sku: string;
-  price: number;
-  salePrice?: number;
+  sku?: string;
+  attributes: {
+    color?: string;
+    size?: string;
+  };
+  priceOverride?: number;
   stock: number;
-  attributes: Map<string, string>;
   images: string[];
   isDefault: boolean;
 }
 
+interface IPricing {
+  basePrice: number;
+  costPrice?: number;
+  saleType?: "flash" | "regular";
+  salePrice?: number;
+  regularPrice?: number; // সাধারণ ডিসকাউন্ট প্রাইস
+  saleStartDate?: Date;
+  saleEndDate?: Date;
+}
+
 export interface IProduct extends Document {
-  vendor: mongoose.Types.ObjectId;
-  vendorEmail: string;
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
   name: string;
   slug: string;
   description: string;
   shortDescription?: string;
-  category: string;
-  subCategory?: string;
   brand: string;
+  sku?: string;
   tags: string[];
-  keywords?: string;
-  basePrice: number;
-  salePrice?: number;
-  saleType?: "flash" | "regular" | null;
-  regularPrice?: number;
-  saleStartDate?: Date;
-  saleEndDate?: Date;
-  costPrice?: number;
-  sku: string;
-  hasVariants: boolean;
-  variants: IVariant[];
+  category: mongoose.Types.ObjectId;
+  subCategory?: string;
   thumbnail: string;
   images: string[];
   videoUrl?: string;
-  specifications: Map<string, string>;
-  isFeatured: boolean;
-  isFlashSale: boolean;
-  status: "pending" | "approved" | "rejected" | "active" | "inactive" | "draft" | "archived";
-  isDeleted: boolean;
-  deletedAt?: Date;
-  rating: number;
-  numReviews: number;
-  totalSales: number;
-  viewCount: number;
+  pricing: IPricing;
   inventory: {
     stock: number;
     lowStockThreshold: number;
     isOutOfStock: boolean;
     allowBackorder: boolean;
   };
+  hasVariants: boolean;
+  variants: IVariant[];
+  specifications: Map<string, string>;
   shipping: {
     weight?: number;
-    dimensions?: { length: number; width: number; height: number; };
-    shippingClass?: string;
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+    };
   };
+  status: "draft" | "pending" | "active" | "inactive" | "archived";
+  isFeatured: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
+  vendor: mongoose.Types.ObjectId;
+  vendorEmail: string;
+  createdBy: mongoose.Types.ObjectId;
+  updatedBy?: mongoose.Types.ObjectId;
+  rating: number;
+  numReviews: number;
+  totalSales: number;
+  viewCount: number;
   metaTitle?: string;
   metaDescription?: string;
-  relatedProducts: mongoose.Types.ObjectId[];
-  upsellProducts: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+
   // Virtuals
   finalPrice: number;
   isSaleActive: boolean;
   isFlashSaleActive: boolean;
   discountPercentage: number;
-  stock: number;
+  totalStock: number;
 }
 
-const variantSchema = new Schema({
-  sku: { type: String, required: true, unique: true, sparse: true },
-  price: { type: Number, required: true, min: 0.01 },
-  salePrice: { type: Number, min: 0 },
-  stock: { type: Number, default: 0, min: 0 },
-  attributes: { type: Map, of: String },
-  images: [{ type: String }],
-  isDefault: { type: Boolean, default: false },
-});
+// =============================================================
+// ✅ VARIANT SUB-SCHEMA
+// =============================================================
 
-const productSchema: Schema<IProduct> = new Schema(
+const variantSchema = new Schema<IVariant>(
   {
-    vendor: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    vendorEmail: { type: String, required: true, trim: true },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
-    name: { type: String, required: true, trim: true, index: "text" },
+    sku: { type: String, trim: true, uppercase: true },
+    attributes: {
+      color: { type: String, trim: true },
+      size: { type: String, trim: true, uppercase: true },
+    },
+    priceOverride: { type: Number, min: 0 },
+    stock: { type: Number, default: 0, min: 0 },
+    images: [{ type: String }],
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: true }
+);
+
+// =============================================================
+// ✅ MAIN PRODUCT SCHEMA
+// =============================================================
+
+const productSchema = new Schema<IProduct>(
+  {
+    name: {
+      type: String,
+      required: [true, "Product name is required"],
+      trim: true,
+      minlength: [5, "Name must be at least 5 characters"],
+    },
     slug: { type: String, unique: true, lowercase: true, index: true },
     description: { type: String, required: true },
     shortDescription: { type: String },
-    category: { type: String, required: true, index: true },
-    subCategory: { type: String },
-    brand: { type: String, required: true, index: true },
-    tags: [{ type: String, index: true }],
-    keywords: { type: String },
-    basePrice: { type: Number, required: true, min: 0.01 },
-    salePrice: { type: Number, min: 0 },
-    saleType: { type: String, enum: ["flash", "regular"], index: true },
-    regularPrice: { type: Number, min: 0 },
-    saleStartDate: { type: Date },
-    saleEndDate: { type: Date },
-    costPrice: { type: Number, min: 0 },
-    sku: { type: String, unique: true, sparse: true, index: true },
-    hasVariants: { type: Boolean, default: false },
-    variants: [variantSchema],
+    brand: { type: String, required: true },
+    sku: { type: String, unique: true, sparse: true, trim: true, uppercase: true },
+    tags: [{ type: String, lowercase: true, trim: true }],
+    category: { type: Schema.Types.ObjectId, ref: "Category", required: true, index: true },
+    subCategory: { type: String, trim: true },
     thumbnail: { type: String, required: true },
     images: [{ type: String }],
     videoUrl: { type: String },
-    specifications: { type: Map, of: String, default: {} },
-    isFeatured: { type: Boolean, default: false },
-    isFlashSale: { type: Boolean, default: false },
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected", "active", "inactive", "draft", "archived"],
-      default: "pending",
-      index: true,
+    pricing: {
+      basePrice: { type: Number, required: true, min: 0.01 },
+      costPrice: { type: Number, min: 0 },
+      saleType: { type: String, enum: ["flash", "regular"], default: null },
+      salePrice: { type: Number, min: 0 },
+      regularPrice: { type: Number, min: 0 },
+      saleStartDate: { type: Date },
+      saleEndDate: { type: Date },
     },
-    isDeleted: { type: Boolean, default: false, index: true },
-    deletedAt: { type: Date },
-    rating: { type: Number, default: 0, min: 0, max: 5 },
-    numReviews: { type: Number, default: 0 },
-    totalSales: { type: Number, default: 0 },
-    viewCount: { type: Number, default: 0 },
     inventory: {
       stock: { type: Number, required: true, default: 0, min: 0 },
       lowStockThreshold: { type: Number, default: 10 },
       isOutOfStock: { type: Boolean, default: false },
       allowBackorder: { type: Boolean, default: false },
     },
+    hasVariants: { type: Boolean, default: false },
+    variants: [variantSchema],
+    specifications: { type: Map, of: String, default: {} },
     shipping: {
       weight: { type: Number, default: 0 },
       dimensions: {
@@ -139,87 +149,139 @@ const productSchema: Schema<IProduct> = new Schema(
         width: { type: Number, default: 0 },
         height: { type: Number, default: 0 },
       },
-      shippingClass: { type: String },
     },
+    status: {
+      type: String,
+      enum: ["draft", "pending", "active", "inactive", "archived"],
+      default: "pending",
+      index: true,
+    },
+    isFeatured: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date },
+    vendor: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    vendorEmail: { type: String, required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    numReviews: { type: Number, default: 0 },
+    totalSales: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
     metaTitle: { type: String },
     metaDescription: { type: String },
-    relatedProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
-    upsellProducts: [{ type: Schema.Types.ObjectId, ref: "Product" }],
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (doc, ret) => {
+        // If flash sale is not active, remove unnecessary flash-related fields
+        if (!ret.isFlashSaleActive) {
+          if (ret.pricing) {
+            delete ret.pricing.saleStartDate;
+            delete ret.pricing.saleEndDate;
+            delete ret.pricing.salePrice;
+          }
+        }
+        // Always remove sensitive or unnecessary internal fields from JSON response
+        if (ret.pricing) {
+          delete ret.pricing.costPrice;
+        }
+        delete ret.status;
+        delete ret.isDeleted;
+        delete ret.deletedAt;
+        delete ret.__v;
+        return ret;
+      }
+    },
     toObject: { virtuals: true },
   }
 );
 
-// Indexes
 productSchema.index({ name: "text", description: "text", tags: "text" });
 
-// Middleware
-productSchema.pre<IProduct>("save", function () {
-  if (this.isModified("name")) {
-    this.slug = this.name.split(" ").join("-").toLowerCase().replace(/[^\w-]+/g, "");
+// =============================================================
+// ✅ PRE-SAVE MIDDLEWARE
+// =============================================================
+
+productSchema.pre("save", async function (this: IProduct) {
+  if (this.isModified("name") || !this.slug) {
+    const baseSlug = this.name.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
+    let slug = baseSlug;
+    let count = 1;
+    const ProductModel = this.constructor as Model<IProduct>;
+    while (await ProductModel.findOne({ slug, _id: { $ne: this._id } })) {
+      slug = `${baseSlug}-${count}`;
+      count++;
+    }
+    this.slug = slug;
   }
 
-  // Auto-set isOutOfStock based on inventory stock
-  if (this.inventory) {
-    this.inventory.isOutOfStock = this.inventory.stock <= 0;
+  const { saleType, salePrice, basePrice, saleStartDate, saleEndDate } = this.pricing;
+
+  if (saleType === "flash") {
+    if (!salePrice || !saleStartDate || !saleEndDate) {
+      throw new Error("Flash sale requires sale price and dates");
+    }
+    if (saleStartDate >= saleEndDate) {
+      throw new Error("Start date must be before end date");
+    }
+    const discountPercent = ((basePrice - salePrice) / basePrice) * 100;
+    if (discountPercent < 15 || discountPercent > 75) {
+      throw new Error(`Flash sale discount (${discountPercent.toFixed(1)}%) must be between 15% and 75%`);
+    }
   }
+
+  if (this.inventory) {
+    const totalStock = this.hasVariants ? this.variants.reduce((acc, v) => acc + (v.stock || 0), 0) : this.inventory.stock;
+    this.inventory.isOutOfStock = totalStock <= 0;
+  }
+
+  this.hasVariants = this.variants.length > 0;
 });
 
-// Virtual for legacy/convenience stock access
-productSchema.virtual("stock").get(function(this: IProduct) {
-  return this.inventory?.stock;
-}).set(function(this: IProduct, value: number) {
-  if (this.inventory) {
-    this.inventory.stock = value;
-  }
-});
+// =============================================================
+// ✅ VIRTUALS
+// =============================================================
 
-// Helper for sales logic
-const getActiveSaleInfo = (p: IProduct) => {
+const getSaleInfo = (product: IProduct) => {
   const now = new Date();
-
-  // Flash Sale is active only during dates
-  const isFlashActive = (p.saleType === "flash" || (p.saleType == null && p.isFlashSale)) &&
-                  p.salePrice != null && p.saleStartDate && p.saleEndDate &&
-                  p.saleStartDate <= now && p.saleEndDate >= now;
-
-  // Regular Sale is active if flash is not active and regularPrice exists
-  const isRegularActive = p.regularPrice != null && p.regularPrice < p.basePrice;
-
+  const { saleType, salePrice, saleStartDate, saleEndDate, basePrice, regularPrice } = product.pricing || {};
+  const isFlashActive = saleType === "flash" && salePrice && saleStartDate && saleEndDate && new Date(saleStartDate) <= now && new Date(saleEndDate) >= now;
+  const isRegularActive = regularPrice && regularPrice < basePrice;
   return { isFlashActive, isRegularActive };
 };
 
 productSchema.virtual("isFlashSaleActive").get(function (this: IProduct) {
-  return getActiveSaleInfo(this).isFlashActive;
+  return getSaleInfo(this).isFlashActive;
 });
 
 productSchema.virtual("isSaleActive").get(function (this: IProduct) {
-  const { isFlashActive, isRegularActive } = getActiveSaleInfo(this);
+  const { isFlashActive, isRegularActive } = getSaleInfo(this);
   return isFlashActive || isRegularActive;
 });
 
 productSchema.virtual("finalPrice").get(function (this: IProduct) {
-  const { isFlashActive, isRegularActive } = getActiveSaleInfo(this);
-
-  // Priority 1: Active Flash Sale
-  if (isFlashActive) return this.salePrice;
-
-  // Priority 2: Regular Sale (if flash expired or not present)
-  if (isRegularActive) return this.regularPrice;
-
-  // Default: Base Price
-  return this.basePrice;
+  const { isFlashActive, isRegularActive } = getSaleInfo(this);
+  if (isFlashActive) return this.pricing.salePrice;
+  if (isRegularActive) return this.pricing.regularPrice;
+  return this.pricing.basePrice;
 });
 
 productSchema.virtual("discountPercentage").get(function (this: IProduct) {
   const finalPrice = this.finalPrice;
-  if (finalPrice < this.basePrice) {
-    return Math.round(((this.basePrice - finalPrice) / this.basePrice) * 100);
+  const basePrice = this.pricing?.basePrice;
+  if (finalPrice < basePrice) {
+    return Math.round(((basePrice - finalPrice) / basePrice) * 100);
   }
   return 0;
+});
+
+productSchema.virtual("totalStock").get(function (this: IProduct) {
+  if (this.hasVariants && this.variants.length > 0) {
+    return this.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
+  }
+  return this.inventory?.stock ?? 0;
 });
 
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>("Product", productSchema);
