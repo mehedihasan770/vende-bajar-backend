@@ -49,14 +49,8 @@ export interface IProduct extends Document {
   hasVariants: boolean;
   variants: IVariant[];
   specifications: Map<string, string>;
-  shipping: {
-    weight?: number;
-    dimensions?: {
-      length: number;
-      width: number;
-      height: number;
-    };
-  };
+  shippingClass: "standard" | "heavy" | "digital";
+  directPayment: boolean;
   status: "draft" | "pending" | "active" | "inactive" | "archived";
   isFeatured: boolean;
   isDeleted: boolean;
@@ -142,14 +136,12 @@ const productSchema = new Schema<IProduct>(
     hasVariants: { type: Boolean, default: false },
     variants: [variantSchema],
     specifications: { type: Map, of: String, default: {} },
-    shipping: {
-      weight: { type: Number, default: 0 },
-      dimensions: {
-        length: { type: Number, default: 0 },
-        width: { type: Number, default: 0 },
-        height: { type: Number, default: 0 },
-      },
+    shippingClass: {
+      type: String,
+      enum: ["standard", "heavy", "digital"],
+      default: "standard",
     },
+    directPayment: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["draft", "pending", "active", "inactive", "archived"],
