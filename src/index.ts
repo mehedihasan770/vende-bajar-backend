@@ -11,6 +11,9 @@ import productRoutes from './routes/productRoutes';
 import reviewRoute from './routes/reviewRoute';
 import sliderRoutes from './routes/sliderRoutes';
 import categoryRoutes from './routes/categoryRoutes';
+import shippingRoutes from './routes/shippingRoutes';
+import orderRoutes from './routes/orderRoutes';
+import bkashRoutes from './routes/bkashRoutes';
 
 // Configuration
 dotenv.config();
@@ -32,6 +35,9 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/review', reviewRoute);
 app.use('/api/v1/sliders', sliderRoutes);
 app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/shipping', shippingRoutes);
+app.use('/api/v1/orders', orderRoutes);
+app.use('/api/v1/bkash', bkashRoutes);
 
 // Root Route
 app.get('/', (req: Request, res: Response) => {
