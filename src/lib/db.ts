@@ -19,11 +19,9 @@ export const connectDB = async () => {
     console.log(`⚡ State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
     console.log(`-------------------------------------------`);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(`❌ MongoDB Connection Failed!`);
-    if (error instanceof Error) {
-      console.error(`📝 Error Message: ${error.message}`);
-    }
+    console.error(`📝 Error Message: ${error.message}`);
     process.exit(1);
   }
 };
