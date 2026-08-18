@@ -14,6 +14,7 @@ import categoryRoutes from './routes/categoryRoutes';
 import shippingRoutes from './routes/shippingRoutes';
 import orderRoutes from './routes/orderRoutes';
 import bkashRoutes from './routes/bkashRoutes';
+import { initCronJobs } from './services/cronService';
 
 // Configuration
 dotenv.config();
@@ -27,6 +28,9 @@ app.use(express.json());
 
 // mongodb
 connectDB();
+
+// Init Cron Jobs
+initCronJobs();
 
 //route
 app.use('/api/v1/auth', authRoutes)
